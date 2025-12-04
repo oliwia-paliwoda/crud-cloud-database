@@ -46,3 +46,20 @@ button{
   box-shadow: rgba(94,45,54,0.91) 1px 1px 5px;
   font-family: "Roboto", sans-serif;
 }
+
+thead{
+  background-color: pink;
+}
+
+tbody{
+  background-color: #ffeef1;
+}
+
+table{
+  font-family: "Roboto", sans-serif;
+}
+
+tr{
+  background-color: pink;
+}
+

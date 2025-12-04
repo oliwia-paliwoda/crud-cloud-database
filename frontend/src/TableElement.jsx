@@ -1,8 +1,8 @@
 import "./TableElement.scss"
 
-function TableElement({tableName}){
+function TableElement({tableName, onClick}){
     return(
-        <div className="table-container">{tableName}</div>
+        <div onClick={onClick} className="table-container">{tableName}</div>
     );
 }
 

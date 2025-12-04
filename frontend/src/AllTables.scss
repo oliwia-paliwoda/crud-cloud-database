@@ -23,3 +23,13 @@
   display: flex;
   gap: 2vmin;
 }
+
+.table-view{
+  @extend .container
+}
+
+.details-view{
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
