@@ -7,16 +7,23 @@ function AllTables(){
     const tables = ["Users", "Projects", "Credentials", "Test"];
 
     const [showDetails, setShowDetails] = useState(false);
-    const handleClick = () => {
-        setShowDetails(!showDetails);
+    const [activeTable, setActiveTable] = useState(null);
+
+    const handleClick = (name) => {
+        setShowDetails(true);
+        setActiveTable(name);
     }
+
+    const handleReturn = () => {
+        setShowDetails(false);
+    };
 
     return (
         <div className="container">
             {!showDetails &&
             <div className="table-view">
             <div className="table-list">
-                {tables.map((name,index) => (<TableElement onClick={handleClick} key={index} tableName={name}/>))}
+                {tables.map((name,index) => (<TableElement onClick={() => handleClick(name)} key={index} tableName={name} />))}
 
             </div>
             <div className="manage-tables">
@@ -28,7 +35,7 @@ function AllTables(){
 
             {showDetails &&
             <div className="details-view">
-                <Table></Table>
+                <Table tableName={activeTable} onReturn={handleReturn}></Table>
             </div>
             }
         </div>
