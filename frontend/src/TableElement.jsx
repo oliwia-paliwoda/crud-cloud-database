@@ -1,8 +1,13 @@
 import "./TableElement.scss"
 
-function TableElement({tableName, onClick}){
-    return(
-        <div onClick={onClick} className="table-container">{tableName}</div>
+function TableElement({ tableName, onClick, isFocused }) {
+    return (
+        <div
+            onClick={onClick}
+            className={`table-container ${isFocused ? "focused" : ""}`}
+        >
+            {tableName}
+        </div>
     );
 }
 

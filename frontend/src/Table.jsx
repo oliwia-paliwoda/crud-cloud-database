@@ -1,5 +1,5 @@
 import "./Table.scss";
-import React, {useState} from "react";
+import React, {useState, useEffect} from "react";
 import TableElement from "./TableElement";
 
 
@@ -12,6 +12,7 @@ function Table({tableName, onReturn}){
         { imie: "Katarzyna", nazwisko: "Wójcik", wiek: 22 },
         { imie: "Marek", nazwisko: "Lewandowski", wiek: 35 }
     ];
+
 
     const [newRecord, setNewRecord] = useState({});
 
@@ -35,7 +36,12 @@ function Table({tableName, onReturn}){
         setFocusedIndex(null);
     }
 
-    const [addCell, setAddCell] = useState({});
+    useEffect(() => {
+        if(actionType === "add")
+        {
+            setFocusedIndex(null);
+        }
+    }, [actionType]);
 
     return(
         <div className="table-page">

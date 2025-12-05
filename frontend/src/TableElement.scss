@@ -10,3 +10,8 @@
   background-color: pink;
   margin: 2vmin;
 }
+
+.table-container.focused{
+  @extend .table-container;
+  background-color: deeppink;
+}

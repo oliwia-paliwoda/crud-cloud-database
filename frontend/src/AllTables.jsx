@@ -18,18 +18,55 @@ function AllTables(){
         setShowDetails(false);
     };
 
+    const [actionType, setActionType] = useState(null);
+    const handleActionType=(action) => {
+        setActionType(action);
+    };
+
+    const [focusedTable, setFocusedTable] = useState(null);
+    const handleSelectTable = (focusedTable) => {
+        setFocusedTable(focusedTable);
+    };
+
     return (
         <div className="container">
             {!showDetails &&
             <div className="table-view">
-            <div className="table-list">
+
+                {actionType === null && <div className="table-list">
                 {tables.map((name,index) => (<TableElement onClick={() => handleClick(name)} key={index} tableName={name} />))}
 
-            </div>
+            </div>}
+
+                {actionType === "remove" && <div className="table-list">
+                    {tables.map((name, index) => (
+                        <TableElement
+                            onClick={() => handleSelectTable(name)}
+                            key={index}
+                            tableName={name}
+                            isFocused={focusedTable === name}
+                        />
+                    ))}                </div>
+                }
+
             <div className="manage-tables">
-                <button>Add table</button>
-                <button>Remove table</button>
+                <button onClick={ () => handleActionType("add")}>Add table</button>
+                <button onClick={ () => handleActionType("remove")}>Remove table</button>
             </div>
+                <div className="action-bar-tables">
+
+
+                    {actionType === "remove" &&
+                        <div className="action-bar-remove">
+
+                        </div>
+                    }
+
+
+                    {actionType === "add" &&
+                        <div>add</div>
+                    }
+                </div>
             </div>
             }
 
