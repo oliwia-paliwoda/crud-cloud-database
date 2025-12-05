@@ -4,7 +4,7 @@ import Table from "./Table";
 import React, {useState} from "react";
 function AllTables(){
 
-    const tables = ["Users", "Projects", "Credentials", "Test"];
+    const tables = [];
 
     const [showDetails, setShowDetails] = useState(false);
     const [activeTable, setActiveTable] = useState(null);
