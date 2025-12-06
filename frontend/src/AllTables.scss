@@ -33,3 +33,23 @@
   flex-direction: column;
   height: 100%;
 }
+
+.action-bar-remove{
+  display: flex;
+  flex-direction: column;
+  gap: 2vmin;
+}
+
+.remove-buttons{
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  gap: 2vmin;
+}
+
+.no-tables{
+  color:pink;
+  font-size: 3vmin;
+  text-align: center;
+  text-shadow: rgba(94,45,54,0.91) 1px 1px 1px;
+}

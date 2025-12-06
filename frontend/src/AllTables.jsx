@@ -17,12 +17,39 @@ function AllTables(){
         }
     };
 
+    const handleRemoveTable = async () => {
+        if (!focusedTable) {
+            console.error("Table not found");
+            return;
+        }
+
+        try {
+            const res = await fetch(`http://localhost:5000/table/${focusedTable}`,
+                {method: "DELETE"});
+
+            const data = await res.json();
+            if (!res.ok) {
+
+
+                setErrorMessage(data.error || "Unknown server error");
+                return;
+            }
+
+            setFocusedTable(null);
+            fetchTables();
+            setErrorMessage(data.message);        } catch (err) {
+            console.error("Fetch error:", err);
+        }
+    };
+
     useEffect(() => {
         fetchTables();
     }, []);
 
     const [showDetails, setShowDetails] = useState(false);
     const [activeTable, setActiveTable] = useState(null);
+    const [errorMessage, setErrorMessage] = useState("");
+
 
     const handleClick = (name) => {
         setShowDetails(true);
@@ -35,6 +62,8 @@ function AllTables(){
 
     const handleCancel = () => {
         setActionType(null);
+        setFocusedTable(null);
+        setErrorMessage("");
         fetchTables();
 
     }
@@ -53,6 +82,10 @@ function AllTables(){
         <div className="container">
             {!showDetails &&
             <div className="table-view">
+
+                {actionType === null && tables.length === 0 &&
+                    <div className="no-tables">No tables found. Click "Add table" to add a table.</div>
+                }
 
                 {actionType === null && <div className="table-list">
                 {tables.map((name,index) => (<TableElement onClick={() => handleClick(name)} key={index} tableName={name} />))}
@@ -73,7 +106,9 @@ function AllTables(){
                 {actionType === null &&
             <div className="manage-tables">
                 <button onClick={ () => handleActionType("add")}>Add table</button>
+                {tables.length > 0 &&
                 <button onClick={ () => handleActionType("remove")}>Remove table</button>
+                }
             </div>
                 }
                 <div className="action-bar-tables">
@@ -81,6 +116,19 @@ function AllTables(){
 
                     {actionType === "remove" &&
                         <div className="action-bar-remove">
+                            <div>{errorMessage}</div>
+                            {focusedTable === null && tables.length > 0 &&
+                        <div style={{marginBottom: "2vmin"}}>Select a table you want to remove.</div>}
+                            {focusedTable !== null &&
+                            <div className="remove-confirm">
+                                <div>Remove table: {focusedTable}?</div>
+                            </div>}
+                            <div className="remove-buttons">
+                                {focusedTable !== null &&
+                            <button onClick={handleRemoveTable} style={{backgroundColor: "deeppink"}}>Remove</button>
+                                }
+                            <button onClick={handleCancel}>Return</button>
+                            </div>
 
                         </div>
                     }

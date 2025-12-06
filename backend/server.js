@@ -33,11 +33,16 @@ app.post("/create-table", async (req, res) => {
         const query = `CREATE TABLE ${safeTableName} (${columnDefinitions});`;
 
         await client.query(query);
-        res.json({ message: `Tabela ${safeTableName} utworzona` });
+        res.json({ message: `Table ${safeTableName} has been created` });
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Błąd SQL" });
+
+        if (err.code === '42P07') {
+            return res.status(400).json({ error: `Table ${tableName} already exists` });
+        }
+
+        res.status(500).json({ error: "SQL error" });
     }
 });
 
@@ -55,10 +60,26 @@ app.get("/tables", async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Błąd pobierania tabel" });
+        res.status(500).json({ error: "Table fetch error" });
     }
 });
 
+app.delete("/table/:name", async (req, res) => {
+    const tableName = req.params.name;
+
+    if (!tableName || !tableName.trim()) {
+        return res.status(400).json({ error: "Table name is required" });
+    }
+
+    try {
+        const safeTableName = tableName.replace(/[^a-zA-Z0-9_]/g, "");
+        await client.query(`DROP TABLE IF EXISTS ${safeTableName};`);
+        res.json({ message: `Table ${safeTableName} has been deleted` });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "SQL error" });
+    }
+});
 
 
 

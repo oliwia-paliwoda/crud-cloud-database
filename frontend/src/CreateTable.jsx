@@ -53,7 +53,15 @@ function CreateTable( {onCancel} ){
             });
 
             const data = await res.json();
-            console.error("Server response:", data);
+            if (!res.ok) {
+                setErrorMessage(data.error || "Unknown server error");
+                return;
+            }
+
+            setErrorMessage(data.message + ". Please return to the main screen.");
+            setTableName("");
+            setColumns([]);
+
         } catch (err) {
             console.error("Fetch error:", err);
         }
@@ -103,7 +111,7 @@ function CreateTable( {onCancel} ){
 
             <div>{errorMessage}</div>
             <button onClick={handleSubmit}>Submit</button>
-            <button onClick={handleCancel}>Cancel</button>
+            <button onClick={handleCancel}>Return</button>
 
         </div>
     )
