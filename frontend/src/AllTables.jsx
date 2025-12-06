@@ -1,10 +1,25 @@
 import "./AllTables.scss"
 import TableElement from "./TableElement";
 import Table from "./Table";
-import React, {useState} from "react";
+import CreateTable from "./CreateTable";
+import React, {useState, useEffect} from "react";
 function AllTables(){
 
-    const tables = [];
+    const [tables, setTables] = useState([]);
+
+    const fetchTables = async () => {
+        try {
+            const res = await fetch("http://localhost:5000/tables");
+            const data = await res.json();
+            setTables(data.tables);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    useEffect(() => {
+        fetchTables();
+    }, []);
 
     const [showDetails, setShowDetails] = useState(false);
     const [activeTable, setActiveTable] = useState(null);
@@ -17,6 +32,12 @@ function AllTables(){
     const handleReturn = () => {
         setShowDetails(false);
     };
+
+    const handleCancel = () => {
+        setActionType(null);
+        fetchTables();
+
+    }
 
     const [actionType, setActionType] = useState(null);
     const handleActionType=(action) => {
@@ -49,10 +70,12 @@ function AllTables(){
                     ))}                </div>
                 }
 
+                {actionType === null &&
             <div className="manage-tables">
                 <button onClick={ () => handleActionType("add")}>Add table</button>
                 <button onClick={ () => handleActionType("remove")}>Remove table</button>
             </div>
+                }
                 <div className="action-bar-tables">
 
 
@@ -64,7 +87,7 @@ function AllTables(){
 
 
                     {actionType === "add" &&
-                        <div>add</div>
+                        <CreateTable onCancel={handleCancel}></CreateTable>
                     }
                 </div>
             </div>

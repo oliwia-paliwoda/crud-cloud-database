@@ -1,0 +1,51 @@
+.create-window{
+  background-color: pink;
+  width: 40vw;
+  height: 29vh;
+  padding: 5vmin;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2vmin;
+  border-radius: 2vmin;
+  background-color: #ffeaec;
+
+}
+
+.name{
+  display: flex;
+  gap: 2vmin;
+  justify-self: start;
+
+}
+
+.top{
+  display: grid;
+  width: 100%;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+}
+
+.columns-button{
+  justify-self: end;
+  display: flex;
+  gap: 1vmin;
+}
+
+.columns{
+  //border: 1px solid pink;
+  width: 95%;
+  max-height: 50%;
+  overflow-y: scroll;
+  padding: 2vmin;
+  display: inline-grid;
+}
+
+.column-row{
+  width: 100%;
+  display: flex;
+  gap: 2vmin;
+  align-items: center;
+  margin-bottom: 1vmin;
+}
