@@ -20,6 +20,32 @@ function Table({tableName, onReturn}){
         }));
     };
 
+    const handleRemoveColumn = async () => {
+        if (!newColumn.name) {
+            setErrorMessage("Please select a column to remove");
+            return;
+        }
+        try {
+            const res = await fetch("http://localhost:5000/remove-column", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tableName, columnName: newColumn.name })
+            });
+            const json = await res.json();
+            if (res.ok) {
+                setActionMessage(json.message || `Column ${newColumn.name} removed`);
+                fetchTableData();
+                actionCancel();
+            } else {
+                setErrorMessage(json.error || "Error removing column");
+            }
+        } catch (err) {
+            console.error(err);
+            setErrorMessage("Error removing column");
+        }
+    };
+
+
     const addColumn = async () => {
         if (!newColumn.name || !newColumn.type) {
             setErrorMessage("Column name and type are required");
@@ -50,6 +76,43 @@ function Table({tableName, onReturn}){
             setActionMessage("Error adding column");
         }
     };
+
+    const handleEditRecord = async () => {
+        if (focusedIndex === null) return;
+
+        if (Object.keys(newRecord).length === 0) {
+            setActionMessage("No changes made");
+            setActionType(null);
+            return;
+        }
+
+        try {
+            const res = await fetch("http://localhost:5000/edit-record", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tableName,
+                    id: data[focusedIndex].id,
+                    updatedFields: newRecord
+                })
+            });
+
+            const json = await res.json();
+            if (res.ok) {
+                setActionMessage(json.message || "Record updated");
+                fetchTableData();
+                setNewRecord({});
+                setActionType(null);
+                setErrorMessage("");
+            } else {
+                setErrorMessage(json.error || "Error updating record");
+            }
+        } catch (err) {
+            console.error(err);
+            setErrorMessage("Error updating record");
+        }
+    };
+
 
 
 
@@ -162,6 +225,7 @@ function Table({tableName, onReturn}){
                 <div className="tools">
                     <button className="tool-button" onClick={() => handleActionType("add")}>Add row</button>
                     <button className="tool-button" onClick={() => handleActionType("add-column")}>Add column</button>
+                    <button className="tool-button" onClick={() => handleActionType("remove-column")}>Remove column</button>
                     {(focusedIndex !== null) &&
                         <div style={{display: "flex", gap: "2vmin"}}>
                     <button className="tool-button-pick" onClick={() => handleActionType("remove")}>Remove record</button>
@@ -228,10 +292,10 @@ function Table({tableName, onReturn}){
 
                 {actionType === "add" && (
                     <div className="add-wrapper">
-                    <div className="add">
                         {errorMessage &&
-                        <div className="error-message">{errorMessage}</div>
+                            <div className="error-message">{errorMessage}</div>
                         }
+                    <div className="add">
                         <div className="input-row" style={{ display: "flex", gap: "1rem" }}>
                             {headers.map((col, index) => (
                                 <div key={index} className="input-cell">
@@ -295,12 +359,69 @@ function Table({tableName, onReturn}){
                     </div>
                 }
 
-                <div className="edit">
-                    {actionType === "edit" &&
-                        <div>
-                            //todo
-                        </div>}
-                </div>
+                {actionType === "edit" && focusedIndex !== null && (
+                    <div className="edit-wrapper">
+                        {errorMessage &&
+                            <div className="error-message">{errorMessage}</div>
+                        }
+                        <div className="edit">
+                            <div className="input-row" style={{ display: "flex", gap: "1rem" }}>
+                                {headers.map((col, index) => {
+                                    if (col.name === "id") return null;
+                                    return (
+                                        <div key={index} className="input-cell">
+                                            <label>{col.name}</label>
+                                            <input
+                                                type="text"
+                                                placeholder={data[focusedIndex][col.name] ?? ""}
+                                                value={newRecord[col.name] || ""}
+                                                onChange={(e) =>
+                                                    setNewRecord(prev => ({ ...prev, [col.name]: e.target.value }))
+                                                }
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        <div className="edit-buttons">
+                            <button
+                                style={{ backgroundColor: "deeppink" }}
+                                onClick={handleEditRecord}
+                            >
+                                Submit
+                            </button>
+                            <button onClick={actionCancel}>Cancel</button>
+                        </div>
+                    </div>
+                )}
+
+                {actionType === "remove-column" && (
+                    <div className="remove-column-wrapper">
+                        {errorMessage && <div className="error-message">{errorMessage}</div>}
+
+                        <select
+                            value={newColumn.name || ""}
+                            onChange={(e) => setNewColumn({ ...newColumn, name: e.target.value })}
+                        >
+                            <option value="">-- Select column --</option>
+                            {headers
+                                .filter(col => col.name !== "id")
+                                .map(col => (
+                                    <option key={col.name} value={col.name}>
+                                        {col.name}
+                                    </option>
+                                ))
+                            }
+                        </select>
+
+                        <div className="remove-column-buttons" style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
+                            <button style={{ backgroundColor: "deeppink" }} onClick={handleRemoveColumn}>Delete</button>
+                            <button onClick={actionCancel}>Cancel</button>
+                        </div>
+                    </div>
+                )}
+
 
             </div>
         </div>

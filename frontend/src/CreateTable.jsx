@@ -10,8 +10,9 @@ function CreateTable( {onCancel} ){
     const columnTypes = ["VARCHAR(100)", "INT", "BOOLEAN", "DATE"];
 
     const addColumn = () => {
-        setColumns([...columns, { name: "", type: columnTypes[0] }]);
+        setColumns([...columns, { name: "", type: columnTypes[0], default: "" }]);
     };
+
 
     const updateColumn = (index, field, value) => {
         const newColumns = [...columns];
@@ -95,6 +96,11 @@ function CreateTable( {onCancel} ){
                             placeholder="Column name"
                             value={col.name}
                             onChange={(e) => updateColumn(index, "name", e.target.value)}
+                        />
+                        <input
+                            placeholder="DEFAULT"
+                            value={col.default || ""}
+                            onChange={(e) => updateColumn(index,"default", e.target.value)}
                         />
                         <select
                             value={col.type}

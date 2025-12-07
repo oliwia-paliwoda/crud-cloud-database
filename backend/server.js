@@ -16,35 +16,68 @@ app.post("/create-table", async (req, res) => {
     }
 
     try {
-        let columnDefinitions = "id SERIAL PRIMARY KEY";
+        const safeTableName = tableName.replace(/[^a-zA-Z0-9_]/g, "");
+        let columnDefinitions = ["id SERIAL PRIMARY KEY"];
 
         if (Array.isArray(columns) && columns.length > 0) {
-            const colDefs = columns.map(col => {
-                const colName = col.name.trim();
-                const colType = col.type.trim();
-                return `${colName} ${colType}`;
-            });
+            for (let col of columns) {
+                const colName = (col.name || "").trim().replace(/[^a-zA-Z0-9_]/g, "");
+                const colType = (col.type || "").trim().toUpperCase();
 
-            columnDefinitions += ", " + colDefs.join(", ");
+                if (!colName || !colType) {
+                    return res.status(400).json({ error: "Each column must have a name and type" });
+                }
+
+                let sqlDefault = "";
+
+                const defaultValue = col.default;
+                if (defaultValue === "" || defaultValue?.toLowerCase?.() === "null" || defaultValue === null || defaultValue === undefined) {
+                    sqlDefault = "DEFAULT NULL";
+                } else {
+                    try {
+                        switch(colType) {
+                            case "INT":
+                                if (isNaN(defaultValue)) throw new Error(`Default for '${colName}' must be a number`);
+                                sqlDefault = `DEFAULT ${defaultValue}`;
+                                break;
+                            case "BOOLEAN":
+                                if (!["true","false"].includes(defaultValue.toLowerCase())) throw new Error(`Default for '${colName}' must be true/false`);
+                                sqlDefault = `DEFAULT ${defaultValue.toLowerCase()}`;
+                                break;
+                            case "DATE":
+                                if (isNaN(Date.parse(defaultValue))) throw new Error(`Default for '${colName}' must be a valid date`);
+                                sqlDefault = `DEFAULT '${defaultValue}'`;
+                                break;
+                            case "VARCHAR(100)":
+                            case "VARCHAR":
+                                sqlDefault = `DEFAULT '${defaultValue}'`;
+                                break;
+                            default:
+                                throw new Error(`Unknown type '${colType}'`);
+                        }
+                    } catch(err) {
+                        return res.status(400).json({ error: err.message });
+                    }
+                }
+
+                columnDefinitions.push(`${colName} ${colType} ${sqlDefault}`.trim());
+            }
         }
 
-        const safeTableName = tableName.replace(/[^a-zA-Z0-9_]/g, "");
-
-        const query = `CREATE TABLE ${safeTableName} (${columnDefinitions});`;
-
+        const query = `CREATE TABLE ${safeTableName} (${columnDefinitions.join(", ")});`;
         await client.query(query);
-        res.json({ message: `Table ${safeTableName} has been created` });
+
+        res.json({ message: `Table '${safeTableName}' has been created.` });
 
     } catch (err) {
         console.error(err);
-
         if (err.code === '42P07') {
-            return res.status(400).json({ error: `Table ${tableName} already exists` });
+            return res.status(400).json({ error: `Table '${tableName}' already exists.` });
         }
-
-        res.status(500).json({ error: "SQL error" });
+        res.status(500).json({ error: "SQL error", details: err.message });
     }
 });
+
 
 app.get("/tables", async (req, res) => {
     try {
@@ -299,10 +332,82 @@ app.post("/add-column", async (req, res) => {
     }
 });
 
+app.put("/edit-record", async (req, res) => {
+    const { tableName, id, updatedFields } = req.body;
 
+    if (!tableName || !id || !updatedFields) {
+        return res.status(400).json({ error: "tableName, id and updatedFields are required" });
+    }
 
+    const safeTable = tableName.replace(/[^a-zA-Z0-9_]/g, "");
 
+    const setClauses = [];
+    const values = [];
 
+    let i = 1;
+    for (const [col, val] of Object.entries(updatedFields)) {
+        let finalVal = val;
+
+        if (val === "" || val === "null") {
+            setClauses.push(`${col} = NULL`);
+        } else {
+            setClauses.push(`${col} = $${i}`);
+            values.push(finalVal);
+            i++;
+        }
+    }
+
+    try {
+        const query = `UPDATE ${safeTable} SET ${setClauses.join(", ")} WHERE id = $${i} RETURNING *;`;
+        values.push(id);
+
+        const result = await client.query(query, values);
+
+        res.json({
+            message: "Record updated",
+            updated: result.rows[0]
+        });
+    } catch (err) {
+        console.error(err);
+        if (err.code === "42P01") {
+            return res.status(400).json({ error: `Table '${tableName}' does not exist.` });
+        }
+        res.status(500).json({ error: "SQL error", details: err.message });
+    }
+});
+
+app.delete("/remove-column", async (req, res) => {
+    const { tableName, columnName } = req.body;
+
+    if (!tableName || !columnName) {
+        return res.status(400).json({ error: "tableName and columnName are required" });
+    }
+
+    const safeTable = tableName.replace(/[^a-zA-Z0-9_]/g, "");
+    const safeColumn = columnName.replace(/[^a-zA-Z0-9_]/g, "");
+
+    if (safeColumn.toLowerCase() === "id") {
+        return res.status(400).json({ error: "Cannot remove 'id' column" });
+    }
+
+    try {
+        const query = `ALTER TABLE ${safeTable} DROP COLUMN ${safeColumn};`;
+        await client.query(query);
+        res.json({ message: `Column '${safeColumn}' removed from table '${safeTable}'.` });
+    } catch (err) {
+        console.error(err);
+
+        if (err.code === "42703") {
+            return res.status(400).json({ error: `Column '${safeColumn}' does not exist` });
+        }
+
+        if (err.code === "42P01") {
+            return res.status(400).json({ error: `Table '${safeTable}' does not exist` });
+        }
+
+        res.status(500).json({ error: "SQL error", details: err.message });
+    }
+});
 
 
 

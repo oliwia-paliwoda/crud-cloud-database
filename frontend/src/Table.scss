@@ -97,12 +97,21 @@
   max-width: 100%;
   display: flex;
   align-items: center;
+  flex-direction: column;
   justify-content: center;
 }
 
 
 .edit{
   @extend .add;
+}
+
+.edit-wrapper{
+  @extend .edit-wrapper
+}
+
+.edit-buttons{
+  @extend .add-buttons;
 }
 
 .delete{
