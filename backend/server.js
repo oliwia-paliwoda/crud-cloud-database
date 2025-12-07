@@ -81,6 +81,127 @@ app.delete("/table/:name", async (req, res) => {
     }
 });
 
+app.get("/get-table", async (req, res) => {
+    const { name } = req.query;
+
+    if (!name || !name.trim()) {
+        return res.status(400).json({ error: "Table name is required" });
+    }
+
+    try {
+        const safeTableName = name.replace(/[^a-zA-Z0-9_]/g, "");
+
+        const colsQuery = `
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = $1
+            ORDER BY ordinal_position;
+        `;
+        const colsResult = await client.query(colsQuery, [safeTableName]);
+        const columns = colsResult.rows.map(r => r.column_name);
+
+        const rowsQuery = `SELECT * FROM ${safeTableName};`;
+        const rowsResult = await client.query(rowsQuery);
+
+        res.json({
+            table: safeTableName,
+            columns,
+            rows: rowsResult.rows
+        });
+
+    } catch (err) {
+        console.error(err);
+
+        if (err.code === "42P01") {
+            return res.status(400).json({ error: `Table ${name} does not exist` });
+        }
+
+        res.status(500).json({ error: "SQL error" });
+    }
+});
+
+app.post("/add-record", async (req, res) => {
+    const { tableName, record } = req.body;
+
+    if (!tableName || !record) {
+        return res.status(400).json({ error: "tableName and record are required" });
+    }
+
+    try {
+        const safeTable = tableName.replace(/[^a-zA-Z0-9_]/g, "");
+
+        const payload = { ...record };
+
+        if (!payload.id) {
+            delete payload.id;
+        }
+
+        const keys = Object.keys(payload);
+        const values = Object.values(payload);
+
+        let query;
+
+        if (keys.length > 0) {
+            const cols = keys.join(", ");
+            const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
+
+            query = `INSERT INTO ${safeTable} (${cols}) VALUES (${placeholders}) RETURNING *;`;
+        } else {
+            query = `INSERT INTO ${safeTable} DEFAULT VALUES RETURNING *;`;
+        }
+
+        const result = await client.query(query, values);
+
+        res.json({
+            message: "Record added",
+            inserted: result.rows[0]
+        });
+
+    } catch (err) {
+        console.error(err);
+
+        if (err.code === "42P01") {
+            return res.status(400).json({ error: `Table '${tableName}' does not exist.` });
+        }
+
+        if (err.code === "23505") {
+            return res.status(400).json({ error: "Duplicate ID. This ID already exists." });
+        }
+
+        res.status(500).json({ error: "SQL error", details: err.message });
+    }
+});
+
+app.delete("/delete-record", async (req, res) => {
+    const { tableName, id } = req.body;
+
+    if (!tableName || !id) {
+        return res.status(400).json({ error: "tableName and id are required" });
+    }
+
+    try {
+        const safeTable = tableName.replace(/[^a-zA-Z0-9_]/g, "");
+        const query = `DELETE FROM ${safeTable} WHERE id = $1 RETURNING *;`;
+        const result = await client.query(query, [id]);
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: "Record not found" });
+        }
+
+        res.json({
+            message: "Record deleted",
+            deleted: result.rows[0]
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "SQL error", details: err.message });
+    }
+});
+
+
+
+
 
 
 app.listen(PORT, () => console.log(`Server działa na http://localhost:${PORT}`));

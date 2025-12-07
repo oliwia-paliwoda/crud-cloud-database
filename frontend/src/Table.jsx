@@ -5,24 +5,85 @@ import TableElement from "./TableElement";
 
 function Table({tableName, onReturn}){
 
-    const data = [
-        { imie: "Jan", nazwisko: "Kowalski", wiek: 25 },
-        { imie: "Anna", nazwisko: "Nowak", wiek: 30 },
-        { imie: "Piotr", nazwisko: "Wiśniewski", wiek: 28 },
-        { imie: "Katarzyna", nazwisko: "Wójcik", wiek: 22 },
-        { imie: "Marek", nazwisko: "Lewandowski", wiek: 35 }
-    ];
+    const [data, setData] = useState([]);
+    const [headers, setHeaders] = useState([]);
+    const [actionMessage, setActionMessage] = useState("Select a row to remove or edit it.");
 
+    const fetchTableData = async () => {
+        try {
+            const res = await fetch(`http://localhost:5000/get-table?name=${tableName}`);
+            const json = await res.json();
+            setHeaders(json.columns);
+            setData(json.rows);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    useEffect(() => {
+        fetchTableData();
+    }, [tableName]);
+
+    const deleteRow = async (id) => {
+        const recordToDelete = data[id];
+        if (!recordToDelete?.id) {
+            console.error("No ID found for the selected record");
+            return;
+        }
+
+        try {
+            const res = await fetch("http://localhost:5000/delete-record", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tableName,
+                    id: recordToDelete.id
+                })
+            });
+
+            const json = await res.json();
+            setActionMessage(json.message);
+
+            fetchTableData();
+            actionCancel();
+
+        } catch (err) {
+            console.error(err);
+        }
+    }
 
     const [newRecord, setNewRecord] = useState({});
 
-    const handleAddRecord = () => {
-        console.error("Dodany rekord:", newRecord);
-        setNewRecord({});
+    const handleAddRecord = async () => {
+        const recordToSend = { ...newRecord };
+
+        console.log("Wysyłam rekord:", recordToSend);
+
+        try {
+            const res = await fetch("http://localhost:5000/add-record", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    tableName,
+                    record: recordToSend
+                })
+            });
+
+            const data = await res.json();
+            setActionMessage(data.message);
+
+            if (data.inserted) {
+                fetchTableData();
+            }
+
+            setNewRecord({});
+            setActionType(null);
+
+        } catch (err) {
+            console.error(err);
+        }
     };
 
-
-    const headers = data.length > 0 ? Object.keys(data[0]) : [];
 
     const [focusedIndex, setFocusedIndex] = useState(null);
 
@@ -34,6 +95,7 @@ function Table({tableName, onReturn}){
     const actionCancel = () => {
         setActionType(null);
         setFocusedIndex(null);
+        setActionMessage("Select a row to remove or edit it.");
     }
 
     useEffect(() => {
@@ -110,17 +172,19 @@ function Table({tableName, onReturn}){
         </div>
             <div className="action-bar">
                 {actionType === null &&
-                <div className="placeholder-text">Select a row to remove or edit it. </div>
+                <div className="placeholder-text">{actionMessage}</div>
                 }
 
                 {actionType === "add" && (
                     <div className="add">
                         <div className="input-row" style={{ display: "flex", gap: "1rem" }}>
-                            {headers.map((name, index) => (
+                            {headers
+                                .map((name, index) => (
                                 <div key={index} className="input-cell">
                                     <label style={{backgroundColor: "pink", borderRadius: "1vmin", padding: "1vmin"}}>{name}</label>
                                     <input
                                         type="text"
+                                        placeholder={name === "id" ? "auto" : ""}
                                         value={newRecord[name] || ""}
                                         onChange={(e) =>
                                             setNewRecord((prev) => ({ ...prev, [name]: e.target.value }))
@@ -140,7 +204,7 @@ function Table({tableName, onReturn}){
                     <div className="delete">
                     <div className="placeholder-text">Delete the selected row?</div>
                     <button onClick={actionCancel}>Cancel</button>
-                        <button style={{backgroundColor: "deeppink"}}>Delete</button>
+                        <button onClick={() =>deleteRow(focusedIndex)} style={{backgroundColor: "deeppink"}}>Delete</button>
                     </div>
 
                 }
