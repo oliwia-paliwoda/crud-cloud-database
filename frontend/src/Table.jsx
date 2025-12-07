@@ -8,6 +8,50 @@ function Table({tableName, onReturn}){
     const [data, setData] = useState([]);
     const [headers, setHeaders] = useState([]);
     const [actionMessage, setActionMessage] = useState("Select a row to remove or edit it.");
+    const [errorMessage, setErrorMessage] = useState("");
+    const [newColumn, setNewColumn] = useState({ type: "VARCHAR(100)" });
+    const columnTypes = ["VARCHAR(100)", "INT", "BOOLEAN", "DATE"];
+
+
+    const updateColumn = (key, value) => {
+        setNewColumn(prev => ({
+            ...prev,
+            [key]: value
+        }));
+    };
+
+    const addColumn = async () => {
+        if (!newColumn.name || !newColumn.type) {
+            setErrorMessage("Column name and type are required");
+            return;
+        }
+
+        try {
+            const res = await fetch("http://localhost:5000/add-column", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tableName, newColumn })
+            });
+
+            const json = await res.json();
+            if (res.ok) {
+                setActionMessage(json.message);
+                fetchTableData();
+                setNewColumn({type: "VARCHAR(100)"});
+                setActionType(null);
+                setErrorMessage("");
+            }
+            else {
+                setErrorMessage(json.error);
+            }
+
+        } catch (err) {
+            console.error(err);
+            setActionMessage("Error adding column");
+        }
+    };
+
+
 
     const fetchTableData = async () => {
         try {
@@ -70,14 +114,15 @@ function Table({tableName, onReturn}){
             });
 
             const data = await res.json();
-            setActionMessage(data.message);
-
-            if (data.inserted) {
+            if (res.ok) {
+                setActionMessage(data.message || "Record added");
                 fetchTableData();
+                setNewRecord({});
+                setActionType(null);
+                setErrorMessage("");
+            } else {
+                setErrorMessage(data.error || "Error adding record");
             }
-
-            setNewRecord({});
-            setActionType(null);
 
         } catch (err) {
             console.error(err);
@@ -90,16 +135,20 @@ function Table({tableName, onReturn}){
     const [actionType, setActionType] = useState(null);
     const handleActionType=(action) => {
         setActionType(action);
+        setErrorMessage("");
     };
 
     const actionCancel = () => {
         setActionType(null);
         setFocusedIndex(null);
         setActionMessage("Select a row to remove or edit it.");
+        setNewColumn({});
+        setNewRecord({});
+        setErrorMessage("");
     }
 
     useEffect(() => {
-        if(actionType === "add")
+        if(actionType === "add" || actionType === "add-column")
         {
             setFocusedIndex(null);
         }
@@ -111,7 +160,8 @@ function Table({tableName, onReturn}){
                 <button className="return" onClick={onReturn}>Return</button>
                 <div className="table-name">{tableName}</div>
                 <div className="tools">
-                    <button className="tool-button" onClick={() => handleActionType("add")}>Add record</button>
+                    <button className="tool-button" onClick={() => handleActionType("add")}>Add row</button>
+                    <button className="tool-button" onClick={() => handleActionType("add-column")}>Add column</button>
                     {(focusedIndex !== null) &&
                         <div style={{display: "flex", gap: "2vmin"}}>
                     <button className="tool-button-pick" onClick={() => handleActionType("remove")}>Remove record</button>
@@ -125,9 +175,9 @@ function Table({tableName, onReturn}){
             <table style={{ borderCollapse: "collapse", width: "90%" }}>
                 <thead>
                 <tr>
-                    {headers.map((key) => (
+                    {headers.map((col) => (
                         <th
-                            key={key}
+                            key={col.name}
                             style={{
                                 border: "1px solid #333",
                                 padding: "8px",
@@ -135,7 +185,7 @@ function Table({tableName, onReturn}){
                                 textTransform: "capitalize",
                             }}
                         >
-                            {key}
+                            {col.name} ({col.type})
                         </th>
                     ))}
                 </tr>
@@ -152,22 +202,23 @@ function Table({tableName, onReturn}){
                                 cursor: "pointer",
                             }}
                         >
-                            {headers.map((key) => (
+                            {headers.map((col) => (
                                 <td
-                                    key={key}
+                                    key={col.name}
                                     style={{
                                         border: "1px solid #333",
                                         padding: "8px",
                                         textAlign: "center",
                                     }}
                                 >
-                                    {row[key]}
+                                    {typeof row[col.name] === "boolean" ? row[col.name].toString() : row[col.name]}
                                 </td>
                             ))}
                         </tr>
                     );
                 })}
                 </tbody>
+
             </table>
         </div>
             <div className="action-bar">
@@ -176,25 +227,30 @@ function Table({tableName, onReturn}){
                 }
 
                 {actionType === "add" && (
+                    <div className="add-wrapper">
                     <div className="add">
+                        {errorMessage &&
+                        <div className="error-message">{errorMessage}</div>
+                        }
                         <div className="input-row" style={{ display: "flex", gap: "1rem" }}>
-                            {headers
-                                .map((name, index) => (
+                            {headers.map((col, index) => (
                                 <div key={index} className="input-cell">
-                                    <label style={{backgroundColor: "pink", borderRadius: "1vmin", padding: "1vmin"}}>{name}</label>
+                                    <label>{col.name}</label>
                                     <input
                                         type="text"
-                                        placeholder={name === "id" ? "auto" : ""}
-                                        value={newRecord[name] || ""}
-                                        onChange={(e) =>
-                                            setNewRecord((prev) => ({ ...prev, [name]: e.target.value }))
-                                        }
+                                        placeholder={col.name === "id" ? "auto" : ""}
+                                        value={newRecord[col.name] || ""}
+                                        onChange={(e) => setNewRecord((prev) => ({ ...prev, [col.name]: e.target.value }))}
                                     />
                                 </div>
                             ))}
                         </div>
+
+                    </div>
+                        <div className="add-buttons">
                         <button style={{backgroundColor: "deeppink"}} onClick={handleAddRecord}>Submit</button>
                         <button onClick={actionCancel}>Cancel</button>
+                        </div>
                     </div>
                 )}
 
@@ -207,6 +263,36 @@ function Table({tableName, onReturn}){
                         <button onClick={() =>deleteRow(focusedIndex)} style={{backgroundColor: "deeppink"}}>Delete</button>
                     </div>
 
+                }
+
+                {actionType === "add-column" &&
+                    <div className="add-column">
+                        {errorMessage &&
+                            <div className="error-message">{errorMessage}</div>
+                        }
+                        <input
+                            placeholder="Column name"
+                            value={newColumn.name || ""}
+                            onChange={(e) => updateColumn("name", e.target.value)}
+                        />
+
+                        <input
+                            placeholder="DEFAULT"
+                            value={newColumn.default || ""}
+                            onChange={(e) => updateColumn("default", e.target.value)}
+                        />
+
+                        <select
+                            value={newColumn.type || ""}
+                            onChange={(e) => updateColumn("type", e.target.value)}
+                        >
+                            {columnTypes.map(type => (
+                                <option key={type} value={type}>{type}</option>
+                            ))}
+                        </select>
+                        <button onClick={actionCancel}>Cancel</button>
+                        <button onClick={addColumn} style={{backgroundColor: "deeppink"}}>Add</button>
+                    </div>
                 }
 
                 <div className="edit">

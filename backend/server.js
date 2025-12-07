@@ -92,13 +92,16 @@ app.get("/get-table", async (req, res) => {
         const safeTableName = name.replace(/[^a-zA-Z0-9_]/g, "");
 
         const colsQuery = `
-            SELECT column_name
+            SELECT column_name, data_type
             FROM information_schema.columns
             WHERE table_name = $1
             ORDER BY ordinal_position;
         `;
         const colsResult = await client.query(colsQuery, [safeTableName]);
-        const columns = colsResult.rows.map(r => r.column_name);
+        const columns = colsResult.rows.map(r => ({
+            name: r.column_name,
+            type: r.data_type
+        }));
 
         const rowsQuery = `SELECT * FROM ${safeTableName};`;
         const rowsResult = await client.query(rowsQuery);
@@ -120,6 +123,7 @@ app.get("/get-table", async (req, res) => {
     }
 });
 
+
 app.post("/add-record", async (req, res) => {
     const { tableName, record } = req.body;
 
@@ -130,21 +134,50 @@ app.post("/add-record", async (req, res) => {
     try {
         const safeTable = tableName.replace(/[^a-zA-Z0-9_]/g, "");
 
-        const payload = { ...record };
+        const colsQuery = `
+            SELECT column_name, data_type
+            FROM information_schema.columns
+            WHERE table_name = $1
+        `;
+        const colsResult = await client.query(colsQuery, [safeTable]);
+        const columns = {};
+        colsResult.rows.forEach(c => {
+            columns[c.column_name] = c.data_type;
+        });
 
-        if (!payload.id) {
-            delete payload.id;
+        // Walidacja typów
+        for (const [key, value] of Object.entries(record)) {
+            if (value === null || value === "null") continue;
+
+            const type = columns[key];
+            if (!type) continue;
+
+            if (type.includes("int")) {
+                if (isNaN(value)) {
+                    return res.status(400).json({ error: `Column '${key}' expects an integer.` });
+                }
+            } else if (type.includes("character") || type.includes("text")) {
+            } else if (type === "boolean") {
+                if (value !== true && value !== false && value !== "true" && value !== "false") {
+                    return res.status(400).json({ error: `Column '${key}' expects a boolean.` });
+                }
+            } else if (type === "date") {
+                if (isNaN(Date.parse(value))) {
+                    return res.status(400).json({ error: `Column '${key}' expects a valid date.` });
+                }
+            }
         }
+
+        const payload = { ...record };
+        if (!payload.id) delete payload.id;
 
         const keys = Object.keys(payload);
         const values = Object.values(payload);
 
         let query;
-
         if (keys.length > 0) {
             const cols = keys.join(", ");
             const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
-
             query = `INSERT INTO ${safeTable} (${cols}) VALUES (${placeholders}) RETURNING *;`;
         } else {
             query = `INSERT INTO ${safeTable} DEFAULT VALUES RETURNING *;`;
@@ -172,6 +205,7 @@ app.post("/add-record", async (req, res) => {
     }
 });
 
+
 app.delete("/delete-record", async (req, res) => {
     const { tableName, id } = req.body;
 
@@ -198,6 +232,74 @@ app.delete("/delete-record", async (req, res) => {
         res.status(500).json({ error: "SQL error", details: err.message });
     }
 });
+
+app.post("/add-column", async (req, res) => {
+    const { tableName, newColumn } = req.body;
+    const { name, type, default: defaultValue } = newColumn || {};
+
+    if (!tableName || !name || !type) {
+        return res.status(400).json({ error: "tableName, name and type are required" });
+    }
+
+    const safeTable = tableName.replace(/[^a-zA-Z0-9_]/g, "");
+    const safeColumn = name.replace(/[^a-zA-Z0-9_]/g, "");
+
+    let sqlDefault = "";
+    let value = defaultValue;
+
+    if (value === "" || (typeof value === "string" && value.toLowerCase() === "null")) {
+        value = null;
+    }
+
+    if (value !== null && value !== undefined) {
+        try {
+            switch (type.toUpperCase()) {
+                case "INT":
+                    if (isNaN(value)) throw new Error("Default must be a number");
+                    sqlDefault = `DEFAULT ${value}`;
+                    break;
+                case "BOOLEAN":
+                    if (!["true", "false"].includes(value.toLowerCase())) {
+                        throw new Error("Default must be true or false");
+                    }
+                    sqlDefault = `DEFAULT ${value.toLowerCase()}`;
+                    break;
+                case "DATE":
+                    if (isNaN(Date.parse(value))) throw new Error("Default must be a valid date");
+                    sqlDefault = `DEFAULT '${value}'`;
+                    break;
+                case "VARCHAR(100)":
+                case "VARCHAR":
+                    sqlDefault = `DEFAULT '${value}'`;
+                    break;
+                default:
+                    throw new Error("Unknown type");
+            }
+        } catch (err) {
+            return res.status(400).json({ error: err.message });
+        }
+    }
+
+    try {
+        const query = `ALTER TABLE ${safeTable} ADD COLUMN ${safeColumn} ${type} ${sqlDefault};`;
+        await client.query(query);
+
+        res.json({ message: `Column '${name}' added to table '${tableName}'.` });
+    } catch (err) {
+        console.error(err);
+
+        if (err.code === "42701") {
+            return res.status(400).json({ error: `Column '${name}' already exists.` });
+        }
+        if (err.code === "42P01") {
+            return res.status(400).json({ error: `Table '${tableName}' does not exist.` });
+        }
+
+        res.status(500).json({ error: "SQL error", details: err.message });
+    }
+});
+
+
 
 
 

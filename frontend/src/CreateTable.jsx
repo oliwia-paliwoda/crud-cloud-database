@@ -44,6 +44,7 @@ function CreateTable( {onCancel} ){
         }
 
         const tableObject = { tableName, columns };
+        console.error(tableObject);
 
         try {
             const res = await fetch("http://localhost:5000/create-table", {

@@ -50,7 +50,9 @@
 .action-bar{
   height: 10vmin;
   margin-bottom: 2vmin;
-  display: flex;
+  max-width: 100%;
+  align-self: center;
+  justify-self: center;
   align-items: center;
   justify-content: center;
 }
@@ -58,6 +60,10 @@
 .tool-button-pick{
   @extend .tool-button;
   background-color: deeppink;
+}
+
+.error-message{
+  color: deeppink;
 }
 
 .input-cell{
@@ -73,7 +79,27 @@
 .add{
   display: flex;
   gap: 2vmin;
+  padding: 1vmin;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  max-width: 80vw;
 }
+
+.add-buttons{
+  display: flex;
+  gap: 2vmin;
+  align-items: center;
+  justify-content: center;
+  padding: 1vmin;
+}
+
+.add-wrapper{
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 
 .edit{
   @extend .add;
@@ -81,5 +107,12 @@
 
 .delete{
   display: flex;
+  gap: 2vmin;
+}
+
+.add-column{
+  display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 2vmin;
 }
