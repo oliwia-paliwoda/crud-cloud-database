@@ -1,12 +1,39 @@
 const express = require("express");
 const cors = require("cors");
-const client = require("./db");
+const { createClient } = require("./db");
 
+
+let client = null;
 const app = express();
 const PORT = 5000;
 
 app.use(cors());
 app.use(express.json());
+
+app.post("/set-db", async (req, res) => {
+    try {
+        const { user, host, database, password, port, ssl } = req.body;
+
+        if (client) {
+            await client.end();
+        }
+
+        const config = { user, host, database, password, port: Number(port) };
+
+        if (ssl) {
+            config.ssl = { rejectUnauthorized: false };
+        }
+
+        client = createClient(config);
+        await client.connect();
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.json({ success: false, error: err.message });
+    }
+});
+
 
 app.post("/create-table", async (req, res) => {
     const { tableName, columns } = req.body;
@@ -81,38 +108,26 @@ app.post("/create-table", async (req, res) => {
 
 app.get("/tables", async (req, res) => {
     try {
+        if (!client) {
+            return res.json({ tables: [] });
+        }
+
         const result = await client.query(`
-            SELECT table_name 
+            SELECT table_name
             FROM information_schema.tables
             WHERE table_schema = 'public'
             ORDER BY table_name;
         `);
 
-        const tables = result.rows.map(row => row.table_name);
+        const tables = result.rows.map(r => r.table_name);
         res.json({ tables });
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Table fetch error" });
+        res.status(500).json({ tables: [], error: "SQL error" });
     }
 });
 
-app.delete("/table/:name", async (req, res) => {
-    const tableName = req.params.name;
-
-    if (!tableName || !tableName.trim()) {
-        return res.status(400).json({ error: "Table name is required" });
-    }
-
-    try {
-        const safeTableName = tableName.replace(/[^a-zA-Z0-9_]/g, "");
-        await client.query(`DROP TABLE IF EXISTS ${safeTableName};`);
-        res.json({ message: `Table ${safeTableName} has been deleted` });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "SQL error" });
-    }
-});
 
 app.get("/get-table", async (req, res) => {
     const { name } = req.query;
@@ -178,7 +193,6 @@ app.post("/add-record", async (req, res) => {
             columns[c.column_name] = c.data_type;
         });
 
-        // Walidacja typów
         for (const [key, value] of Object.entries(record)) {
             if (value === null || value === "null") continue;
 
@@ -235,6 +249,23 @@ app.post("/add-record", async (req, res) => {
         }
 
         res.status(500).json({ error: "SQL error", details: err.message });
+    }
+});
+
+app.delete("/table/:name", async (req, res) => {
+    const tableName = req.params.name;
+
+    if (!tableName || !tableName.trim()) {
+        return res.status(400).json({ error: "Table name is required" });
+    }
+
+    try {
+        const safeTableName = tableName.replace(/[^a-zA-Z0-9_]/g, "");
+        await client.query(`DROP TABLE IF EXISTS ${safeTableName};`);
+        res.json({ message: `Table ${safeTableName} has been deleted` });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "SQL error" });
     }
 });
 

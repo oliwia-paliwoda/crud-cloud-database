@@ -61,3 +61,7 @@ tr{
   background-color: pink;
 }
 
+label{
+    color: pink;
+    font-weight: bold;
+}
