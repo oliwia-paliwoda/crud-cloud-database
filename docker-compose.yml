@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ./backend
+    container_name: crud-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+    networks:
+      - app-network
+
+  frontend:
+    build: ./frontend
+    container_name: crud-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
