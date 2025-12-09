@@ -1,23 +1,25 @@
-version: "3.9"
+version: '3.8'
 
 services:
   backend:
     build: ./backend
-    container_name: crud-backend
+    container_name: backend
     ports:
       - "5000:5000"
-    environment:
-      - NODE_ENV=development
     networks:
       - app-network
+    environment:
+      - NODE_ENV=production
 
   frontend:
     build: ./frontend
-    container_name: crud-frontend
+    container_name: frontend
     ports:
       - "3000:80"
     depends_on:
       - backend
+    environment:
+      - REACT_APP_API_URL=http://backend:5000
     networks:
       - app-network
 
