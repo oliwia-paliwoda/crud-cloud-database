@@ -9,6 +9,9 @@ import {useState} from "react";
 function App() {
     const [connectionSuccess, setConnectionSuccess] = useState(false);
 
+    const API_URL = process.env.REACT_APP_API_URL;
+    console.error(API_URL);
+
     return (
         <div className="App">
             {connectionSuccess ? (

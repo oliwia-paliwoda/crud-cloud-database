@@ -5,6 +5,9 @@ import TableElement from "./TableElement";
 
 function Table({tableName, onReturn}){
 
+    const API_URL = "https://crud-cloud-app-backend.azurewebsites.net";
+
+
     const [data, setData] = useState([]);
     const [headers, setHeaders] = useState([]);
     const [actionMessage, setActionMessage] = useState("Select a row to remove or edit it.");
@@ -26,7 +29,7 @@ function Table({tableName, onReturn}){
             return;
         }
         try {
-            const res = await fetch("http://localhost:5000/remove-column", {
+            const res = await fetch(`${API_URL}/remove-column`, {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ tableName, columnName: newColumn.name })
@@ -53,7 +56,7 @@ function Table({tableName, onReturn}){
         }
 
         try {
-            const res = await fetch("http://localhost:5000/add-column", {
+            const res = await fetch(`${API_URL}/add-column`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ tableName, newColumn })
@@ -87,7 +90,7 @@ function Table({tableName, onReturn}){
         }
 
         try {
-            const res = await fetch("http://localhost:5000/edit-record", {
+            const res = await fetch(`${API_URL}/edit-record`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -118,7 +121,7 @@ function Table({tableName, onReturn}){
 
     const fetchTableData = async () => {
         try {
-            const res = await fetch(`http://localhost:5000/get-table?name=${tableName}`);
+            const res = await fetch(`${API_URL}/get-table?name=${tableName}`);
             const json = await res.json();
             setHeaders(json.columns);
             setData(json.rows);
@@ -139,7 +142,7 @@ function Table({tableName, onReturn}){
         }
 
         try {
-            const res = await fetch("http://localhost:5000/delete-record", {
+            const res = await fetch(`${API_URL}/delete-record`, {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -167,7 +170,7 @@ function Table({tableName, onReturn}){
         console.log("Wysyłam rekord:", recordToSend);
 
         try {
-            const res = await fetch("http://localhost:5000/add-record", {
+            const res = await fetch(`${API_URL}/add-record`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

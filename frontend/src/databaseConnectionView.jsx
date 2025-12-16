@@ -2,13 +2,19 @@ import { useState } from "react";
 import "./DatabaseConnectionView.scss";
 
  function DatabaseSelector( {setConnectionSuccess}) {
-    const [form, setForm] = useState({
-        user: "postgres",
-        host: "localhost",
-        database: "baza",
-        password: "123",
+
+     //const API_URL = process.env.REACT_APP_API_URL;
+     const API_URL = "https://crud-cloud-app-backend.azurewebsites.net";
+     console.error(API_URL);
+
+
+     const [form, setForm] = useState({
+        user: "admin_db",
+        host: "my-crud-db.postgres.database.azure.com",
+        database: "postgres",
+        password: "rthjbv1@",
         port: 5432,
-        ssl: false,
+        ssl: true,
     });
 
     const [status, setStatus] = useState("");
@@ -21,7 +27,7 @@ import "./DatabaseConnectionView.scss";
         setStatus("Łączenie...");
 
         try {
-            const res = await fetch("http://localhost:5000/set-db", {
+            const res = await fetch(`${API_URL}/set-db`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(form)

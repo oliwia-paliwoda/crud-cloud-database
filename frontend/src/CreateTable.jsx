@@ -3,6 +3,8 @@ import React, {useState, useEffect} from "react";
 
 function CreateTable( {onCancel} ){
 
+    const API_URL = "https://crud-cloud-app-backend.azurewebsites.net";
+
     const [tableName, setTableName] = useState("");
     const [columns, setColumns] = useState([]);
     const [errorMessage, setErrorMessage] = useState("");
@@ -48,7 +50,7 @@ function CreateTable( {onCancel} ){
         console.error(tableObject);
 
         try {
-            const res = await fetch("http://localhost:5000/create-table", {
+            const res = await fetch(`${API_URL}/create-table`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(tableObject)

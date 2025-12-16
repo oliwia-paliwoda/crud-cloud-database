@@ -5,11 +5,13 @@ import CreateTable from "./CreateTable";
 import React, {useState, useEffect} from "react";
 function AllTables(){
 
+    const API_URL = "https://crud-cloud-app-backend.azurewebsites.net";
+
     const [tables, setTables] = useState([]);
 
     const fetchTables = async () => {
         try {
-            const res = await fetch("http://localhost:5000/tables");
+            const res = await fetch(`${API_URL}/tables`);
             const data = await res.json();
             setTables(data.tables);
         } catch (err) {
@@ -24,7 +26,7 @@ function AllTables(){
         }
 
         try {
-            const res = await fetch(`http://localhost:5000/table/${focusedTable}`,
+            const res = await fetch(`${API_URL}/table/${focusedTable}`,
                 {method: "DELETE"});
 
             const data = await res.json();
